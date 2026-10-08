@@ -1,0 +1,69 @@
+{
+ "name": "RRB section controller CEN 03/2026 exam date",
+ "query": "RRB section controller CEN 03/2026 exam date",
+ "created": "2026-10-06T20:51:53",
+ "steps": [
+  {
+   "i": 0,
+   "t": 1791319915.41,
+   "kind": "guidance",
+   "text": "Check sarkariresult.com for this and give me the date."
+  },
+  {
+   "i": 1,
+   "t": 1791319915.83,
+   "kind": "search",
+   "query": "RRB section controller CEN 03/2026 exam date",
+   "provider": "browser_google"
+  },
+  {
+   "i": 2,
+   "t": 1791319925.7,
+   "kind": "goto",
+   "url": "https://www.sarkariresult.com"
+  },
+  {
+   "i": 3,
+   "t": 1791319929.08,
+   "kind": "click",
+   "target": {
+    "id": "lnk:open-search-bar",
+    "role": "link",
+    "name": "Open Search Bar",
+    "region": "r:primary"
+   },
+   "url": "https://www.sarkariresult.com/"
+  },
+  {
+   "i": 4,
+   "t": 1791319941.77,
+   "kind": "click",
+   "target": {
+    "id": "lnk:open-search-bar",
+    "role": "link",
+    "name": "Open Search Bar",
+    "region": "r:primary"
+   },
+   "url": "https://www.sarkariresult.com/"
+  },
+  {
+   "i": 5,
+   "t": 1791319953.99,
+   "kind": "search",
+   "query": "site:sarkariresult.com RRB section controller CEN 03/2026",
+   "provider": "browser_google"
+  },
+  {
+   "i": 6,
+   "t": 1791319966.6,
+   "kind": "click",
+   "target": {
+    "id": "lnk:read-more@main-2",
+    "role": "link",
+    "name": "Read more",
+    "region": "r:main"
+   },
+   "url": "https://www.google.com/search?q=site%3Asarkariresult.com+RRB+section+controller+CEN+03%2F2026&hl=en&gl=in"
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+aiohttp>=3.9
+websockets>=12,<14
+tiktoken>=0.7
+pillow>=10

@@ -1,0 +1,22 @@
+{
+ "name": "find me ssc je 2026 exam date",
+ "query": "find me ssc je 2026 exam date",
+ "created": "2026-10-06T20:49:10",
+ "steps": [
+  {
+   "i": 0,
+   "t": 1791319753.57,
+   "kind": "search",
+   "query": "find me ssc je 2026 exam date",
+   "provider": "browser_google"
+  },
+  {
+   "i": 1,
+   "t": 1791319757.37,
+   "kind": "ai_check",
+   "question": "Is this goal achieved on this page: find me ssc je 2026 exam date?",
+   "expect": "yes",
+   "url": "https://www.google.com/search?q=find+me+ssc+je+2026+exam+date&hl=en&gl=in&sei=x17FapryCunO0PEP5u3riQw"
+  }
+ ]
+}

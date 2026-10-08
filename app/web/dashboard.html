@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#E9EEF2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1622" media="(prefers-color-scheme: dark)">
+<title>Agent Browser</title>
+<link rel="preload" href="/static/fonts/ahn-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/ui.css">
+<style>
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 16px 8px;max-width:1240px;margin:0 auto}
+.top h1{font-size:1.25rem}
+.top nav{display:flex;gap:4px}
+.top nav a{font-weight:600;padding:10px 10px;min-height:44px;display:inline-flex;align-items:center}
+main{max-width:1240px;margin:0 auto;padding:0 16px 48px;display:grid;gap:28px}
+@media (min-width:960px){main{grid-template-columns:3fr 2fr;align-items:start;gap:40px}.side{position:sticky;top:12px}}
+.compose{padding:4px 0 0}
+.compose h2{font-size:1.5625rem;margin-bottom:10px}
+.compose .hint{font-size:.875rem;color:var(--muted);margin-top:8px;max-width:62ch}
+.compose .bar{display:flex;gap:12px;align-items:end;margin-top:12px;flex-wrap:wrap}
+.compose .steps{width:96px}
+.compose .steps input{text-align:center}
+.compose .go{flex:1 1 180px}
+.compose details{margin-top:10px}
+summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;gap:8px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
+details[open]>summary::before{transform:rotate(45deg)}
+@media (prefers-reduced-motion:reduce){summary::before{transition:none}}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 6px}
+.sec-head h2{font-size:1.25rem}
+.tasks{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.task{position:relative;padding:14px 0 14px 18px;border-bottom:1px solid var(--rule)}
+.task::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:6px;border-radius:3px;background:var(--edge,var(--rule))}
+.task h3{font-size:1.0625rem;font-weight:600;margin:4px 0 2px;overflow-wrap:anywhere}
+.task .where{font-size:.9375rem;color:var(--muted)}
+.task .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.task .answer{margin-top:10px;padding:10px 12px;background:var(--leaf-wash);border-radius:10px;overflow-wrap:anywhere}
+.task .error{margin-top:10px;padding:10px 12px;background:var(--brick-wash);border-radius:10px;overflow-wrap:anywhere}
+.task .blocked{margin-top:10px;padding:10px 12px;background:var(--marigold-wash);border-radius:10px}
+.task .shot{display:block;width:100%;max-width:520px;border-radius:10px;border:1px solid var(--rule);margin-top:10px}
+.task .more{margin-top:6px}
+.task ol{margin:6px 0 0;padding-left:22px;font-size:.875rem}
+.task ol li{margin:3px 0;overflow-wrap:anywhere}
+.task pre{white-space:pre-wrap;font:.75rem/1.5 var(--mono);color:var(--muted);max-height:260px;overflow:auto;background:var(--sheet);padding:10px;border-radius:10px;border:1px solid var(--rule)}
+.task .tell{display:flex;gap:8px;margin-top:10px}
+.task .facts{font-size:.875rem;color:var(--muted);margin-top:6px}
+.task .tfiles{margin-top:10px}
+.empty{padding:20px 0;color:var(--muted)}
+.side section{border-top:1px solid var(--rule);padding:6px 0 10px}
+.side section:first-child{border-top:0}
+.side .body{padding:4px 0 10px;display:grid;gap:10px}
+.side .note{font-size:.8125rem;color:var(--muted)}
+.flow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--rule)}
+.flow:first-child{border-top:0}
+.flow b{font-weight:600;overflow-wrap:anywhere}
+.status-line{font-size:.875rem;color:var(--muted)}
+.status-line.bad{color:var(--brick)}
+</style></head>
+<body>
+<header class="top">
+  <h1>Agent Browser</h1>
+  <nav aria-label="Pages"><a href="/live">Live screen</a></nav>
+</header>
+<main>
+<div>
+  <section class="compose" aria-labelledby="new-h">
+    <h2 id="new-h">What should the agent do?</h2>
+    <label class="sr" for="q">Task</label>
+    <textarea id="q" placeholder="Download my e-Aadhaar. My Aadhaar number is 1234 5678 9012" rows="3"></textarea>
+    <p class="hint">Numbers and details you type here stay inside this task. Only a safe search like "download aadhaar card" goes to Google.</p>
+    <div class="bar">
+      <label class="field steps"><span>Steps</span><input id="ms" type="number" inputmode="numeric" value="12" min="2" max="40"></label>
+      <button class="primary go" id="go">Start task</button>
+    </div>
+    <details><summary>More options</summary>
+      <label class="row" style="min-height:44px"><input type="checkbox" id="fb" style="width:auto;min-height:0"> Meet a bot check first (to try the handover)</label>
+    </details>
+    <p class="status-line" id="gomsg" role="status"></p>
+  </section>
+
+  <section aria-labelledby="tasks-h" style="margin-top:28px">
+    <div class="sec-head"><h2 id="tasks-h">Tasks</h2><span class="small muted" id="ext"></span></div>
+    <ul class="tasks" id="tasks"><li class="empty">No tasks yet. Describe one above and tap Start task.</li></ul>
+  </section>
+</div>
+
+<aside class="side" aria-label="Files and setup">
+  <section id="files-sec">
+    <div class="sec-head"><h2>Files</h2><span class="small muted" id="keep"></span></div>
+    <div id="allfiles" class="body"><p class="note">Files the agent downloads show up here.</p></div>
+  </section>
+  <section>
+    <details><summary>Saved flows</summary>
+      <div class="body"><p class="note">A finished task is saved as a flow. Replaying it repeats the same clicks without the AI, and asks again for any personal values.</p><div id="flows">Loading…</div></div>
+    </details>
+  </section>
+  <section>
+    <details><summary>Browser extensions</summary>
+      <div class="body">
+        <div id="extlist" class="note"></div>
+        <div class="row"><label class="sr" for="extref">Extension link</label><input id="extref" class="grow" placeholder="Chrome Web Store link or extension id" autocomplete="off"><button id="extadd">Install</button></div>
+        <p class="status-line" id="extst" role="status"></p>
+        <p class="note">uBlock Origin Lite is built in. The original uBlock Origin no longer runs on current Chromium.</p>
+      </div>
+    </details>
+  </section>
+  <section>
+    <details id="setdet"><summary>Settings</summary>
+      <div class="body">
+        <p class="status-line" id="setst" role="status"></p>
+        <label class="field"><span>OpenRouter API key</span><input id="k_or" type="password" placeholder="sk-or-…" autocomplete="off"></label>
+        <label class="field"><span>Google Gemini API key</span><input id="k_gem" type="password" placeholder="AIza…" autocomplete="off"></label>
+        <label class="field"><span>Groq API key</span><input id="k_groq" type="password" placeholder="gsk_…" autocomplete="off"></label>
+        <details><summary>Another OpenAI-compatible provider</summary>
+          <div class="body">
+            <label class="field"><span>Base URL</span><input id="k_cb" placeholder="https://api.cerebras.ai/v1" autocomplete="off"></label>
+            <label class="field"><span>API key</span><input id="k_ck" type="password" autocomplete="off"></label>
+            <label class="field"><span>Model (optional)</span><input id="k_cm" autocomplete="off"></label>
+          </div>
+        </details>
+        <label class="field"><span>Phone alerts (ntfy topic)</span><input id="k_ntfy" placeholder="for example abhinav-agent-7x2" autocomplete="off"></label>
+        <label class="field"><span>Delete downloaded files after (hours)</span><input id="k_keep" type="number" inputmode="numeric" min="1" max="720" placeholder="24"></label>
+        <label class="field"><span>Simple text captchas</span><select id="k_cap"><option value="on">Let the agent read them</option><option value="off">Always ask me</option></select></label>
+        <label class="field"><span>Ask me before pressing</span><select id="k_conf"><option value="final">Final submit and payment buttons</option><option value="money">Payment buttons only</option><option value="off">Never ask</option></select></label>
+        <button class="primary" id="ksave">Save settings</button>
+        <details><summary>GitHub backup</summary>
+          <div class="body">
+            <label class="field"><span>GitHub token (repo scope)</span><input id="k_gh" type="password" autocomplete="off"></label>
+            <label class="field"><span>Repository</span><input id="k_ghr" placeholder="owner/repo (default: you/agent-browser)" autocomplete="off"></label>
+            <button id="ghsync">Save token and upload code</button>
+            <p class="status-line" id="ghst" role="status"></p>
+            <p class="note">Only the app's code is uploaded. Downloaded files and your settings never are.</p>
+          </div>
+        </details>
+      </div>
+    </details>
+  </section>
+</aside>
+</main>
+<script src="/static/ui.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const {esc, post, STATE, live, where, askHTML, wireAsk, keepAsks, filesHTML, wireFiles} = UI;
+const openState = {};
+let lastJSON = '';
+
+$('#go').onclick = async () => {
+  const query = $('#q').value.trim();
+  if (!query) { $('#gomsg').textContent = 'Describe a task first.'; $('#q').focus(); return; }
+  $('#go').disabled = true;
+  const r = await post('/api/tasks', {query, force_block: $('#fb').checked, max_steps: +$('#ms').value});
+  $('#go').disabled = false;
+  if (r.ok) { $('#q').value = ''; $('#gomsg').textContent = 'Started. It shows up under Tasks.'; lastJSON = ''; load(); }
+  else $('#gomsg').textContent = 'The task did not start. Check the text and try again.';
+};
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) $('#go').click(); });
+
+function taskHTML(t) {
+  const st = t.status, isLive = live(st);
+  const acts = [];
+  if (st === 'needs_input' || st === 'needs_you' || st === 'running' || st === 'paused') acts.push(`<a class="btn ${st === 'needs_you' ? 'ask' : ''}" href="/live/${t.id}">${st === 'needs_you' ? 'Open live screen' : 'Watch live'}</a>`);
+  if (st === 'running' || st === 'queued') acts.push(`<button data-do="pause" data-id="${t.id}">Pause and take over</button>`);
+  if (st === 'paused' || st === 'needs_you') acts.push(`<button class="primary" data-do="resume" data-id="${t.id}">Resume</button>`);
+  if (isLive) acts.push(`<button class="danger" data-do="stop" data-id="${t.id}">Stop</button>`);
+  const steps = (t.steps || []).map(s => `<li><b>${esc(s.action)}</b> ${esc(s.detail)}</li>`).join('');
+  const facts = (t.facts || []).filter(f => f.masked || f.skipped);
+  return `<li class="task edge-${st}" data-id="${t.id}">
+    <span class="state s-${st}">${esc(STATE[st] || st)}</span>${t.mode === 'replay' ? ' <span class="small muted">replay</span>' : ''}
+    <h3>${esc(t.goal)}</h3>
+    ${where(t) ? `<p class="where">${esc(where(t))}</p>` : ''}
+    ${t.input_req ? askHTML(t) : ''}
+    ${t.blocker ? `<div class="blocked"><b>${esc(t.blocker.label)}</b><br>${esc(t.blocker.needs)}</div>` : ''}
+    ${t.answer ? `<div class="answer">${esc(t.answer)}</div>` : ''}${t.error ? `<div class="error">${esc(t.error)}</div>` : ''}
+    ${(t.files || []).length ? `<div class="tfiles">${filesHTML(t.id, t.files)}</div>` : ''}
+    ${acts.length ? `<div class="acts">${acts.join('')}</div>` : ''}
+    ${isLive && st !== 'needs_input' ? `<div class="tell"><label class="sr" for="g-${t.id}">Tell the agent</label><input id="g-${t.id}" class="grow" placeholder="Tell the agent how to go on" autocomplete="off"><button data-do="guide" data-id="${t.id}">Send</button></div>` : ''}
+    ${(t.guidance || []).length ? `<p class="facts">You told it: ${t.guidance.map(esc).join('; ')}</p>` : ''}
+    ${facts.length ? `<p class="facts">Your details in this task: ${facts.map(f => `${esc(f.label)} ${f.skipped ? '(skipped)' : esc(f.masked)}`).join(', ')}</p>` : ''}
+    <details class="more" data-id="${t.id}" ${openState[t.id] ? 'open' : ''}><summary>Steps and log</summary>
+      ${t.search ? `<p class="small muted">Searched for: ${esc(t.search)}</p>` : ''}
+      ${st === 'running' ? `<img class="shot" alt="The browser right now" src="/api/shot/${t.id}.png?${Date.now()}" onerror="this.remove()">` : ''}
+      <ol>${steps}</ol><pre>${esc((t.logs || []).join('\n'))}</pre>
+      ${t.flow ? `<p class="small muted">Saved as flow ${esc(t.flow)}</p>` : ''}</details>
+  </li>`;
+}
+
+async function load() {
+  let raw;
+  try { raw = await (await fetch('/api/tasks')).text(); } catch (e) { return; }
+  if (raw === lastJSON) return;
+  const ae = document.activeElement;
+  if (ae && ae.closest && ae.closest('#tasks') && (ae.matches('input,textarea,select'))) return; // you are typing: do not redraw
+  lastJSON = raw;
+  const d = JSON.parse(raw);
+  document.querySelectorAll('details.more').forEach(el => openState[el.dataset.id] = el.open);
+  $('#ext').textContent = d.ext && d.ext.connected ? 'Chrome extension connected' : '';
+  const box = $('#tasks');
+  keepAsks(box, () => {
+    box.innerHTML = d.tasks.length ? d.tasks.map(taskHTML).join('') : '<li class="empty">No tasks yet. Describe one above and tap Start task.</li>';
+  });
+  wireAsk(box, () => { lastJSON = ''; setTimeout(load, 300); });
+  wireFiles(box, () => { lastJSON = ''; load(); allFiles(); });
+}
+$('#tasks').addEventListener('click', async e => {
+  const b = e.target.closest('[data-do]');
+  if (!b) return;
+  const id = b.dataset.id, a = b.dataset.do;
+  if (a === 'stop' && !confirm('Stop this task?')) return;
+  if (a === 'guide') { const el = document.getElementById('g-' + id); const v = el.value.trim(); if (!v) return;
+    await post(`/api/tasks/${id}/guide`, {text: v}); el.value = ''; el.blur(); }
+  else await post(`/api/tasks/${id}/${a}`);
+  lastJSON = ''; load();
+});
+$('#tasks').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id && e.target.id.startsWith('g-')) { e.preventDefault(); e.target.nextElementSibling.click(); } });
+
+async function allFiles() {
+  try {
+    const r = await (await fetch('/api/files')).json();
+    $('#keep').textContent = `Kept for ${r.retention_hours} hours`;
+    const byTask = {};
+    r.files.forEach(f => (byTask[f.task] = byTask[f.task] || []).push({name: f.name, size: f.size, mime: f.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : ''}));
+    const html = Object.entries(byTask).map(([tid, fs]) => filesHTML(tid, fs)).join('');
+    $('#allfiles').innerHTML = html || '<p class="note">Files the agent downloads show up here.</p>';
+  } catch (e) {}
+}
+wireFiles($('#allfiles'), () => { allFiles(); lastJSON = ''; load(); });
+
+async function flows() {
+  try {
+    const f = await (await fetch('/api/flows')).json();
+    $('#flows').innerHTML = f.length ? f.slice(-12).reverse().map(x => `<div class="flow"><div><b>${esc(x.name)}</b><br><span class="small muted">${x.steps} steps${x.kinds.includes('human_takeover') ? ', includes a handover to you' : ''}</span></div>
+      <div class="row"><a class="small" href="/api/flows/${encodeURIComponent(x.file)}" target="_blank" rel="noopener">JSON</a><button class="small" data-replay="${esc(x.file)}">Replay</button></div></div>`).join('') : '<p class="note">No flows yet.</p>';
+  } catch (e) {}
+}
+$('#flows').addEventListener('click', async e => { const b = e.target.closest('[data-replay]'); if (!b) return;
+  await post('/api/replay', {file: b.dataset.replay}); lastJSON = ''; load(); window.scrollTo({top: 0}); });
+
+async function settings() {
+  try {
+    const s = await (await fetch('/api/settings')).json();
+    const m = s.models || {}, on = Object.entries(m).filter(([k, v]) => v).map(([k, v]) => v === true ? k : `${k} (${v})`);
+    const el = $('#setst');
+    el.textContent = on.length ? `Using ${on.join(', ')}.${s.ntfy_topic ? ' Phone alerts are on.' : ''}` : 'No AI key yet. Add at least one below.';
+    el.classList.toggle('bad', !on.length);
+    if (!on.length) $('#setdet').open = true;
+    $('#k_keep').placeholder = s.file_retention_hours || 24;
+    $('#k_cap').value = s.auto_captcha === false ? 'off' : 'on';
+    $('#k_conf').value = s.confirm_mode || 'final';
+  } catch (e) {}
+}
+$('#ksave').onclick = async () => {
+  const b = {openrouter_key: $('#k_or').value, gemini_key: $('#k_gem').value, groq_key: $('#k_groq').value, custom_base: $('#k_cb').value,
+    custom_key: $('#k_ck').value, custom_model: $('#k_cm').value, ntfy_topic: $('#k_ntfy').value, file_retention_hours: $('#k_keep').value,
+    auto_captcha: $('#k_cap').value, confirm_mode: $('#k_conf').value};
+  const r = await (await post('/api/settings', b)).json();
+  ['#k_or', '#k_gem', '#k_groq', '#k_cb', '#k_ck', '#k_cm', '#k_ntfy', '#k_keep'].forEach(i => $(i).value = '');
+  $('#setst').textContent = r.ok ? 'Settings saved.' : (r.error || 'Settings were not saved.');
+  setTimeout(() => { settings(); allFiles(); }, 800);
+};
+$('#ghsync').onclick = async () => {
+  $('#ghst').textContent = 'Uploading…';
+  const b = {github_token: $('#k_gh').value, github_repo: $('#k_ghr').value};
+  if (b.github_token || b.github_repo) await post('/api/settings', b);
+  $('#k_gh').value = '';
+  const r = await (await post('/api/github/sync')).json();
+  $('#ghst').innerHTML = r.ok ? `Uploaded ${r.files} files to <a href="${esc(r.repo)}" target="_blank" rel="noopener">${esc(r.repo)}</a>.` : 'Upload failed: ' + esc(r.error);
+};
+async function exts() {
+  try {
+    const r = await (await fetch('/api/extensions')).json();
+    $('#extlist').innerHTML = r.extensions.length ? r.extensions.map(e => `<div class="flow"><b>${esc(e.name)}</b>${e.builtin ? '<span class="small muted">Built in</span>' : `<button class="small" data-extrm="${e.id}">Remove</button>`}</div>`).join('') : 'None installed.';
+  } catch (e) {}
+}
+$('#extlist').addEventListener('click', async e => { const b = e.target.closest('[data-extrm]'); if (b) { await post(`/api/extensions/${b.dataset.extrm}/remove`); exts(); } });
+$('#extadd').onclick = async () => {
+  $('#extst').textContent = 'Installing…';
+  const r = await (await post('/api/extensions', {ref: $('#extref').value})).json();
+  $('#extst').textContent = r.ok ? `${r.name} installed${r.active ? '.' : '. It turns on when the current task ends.'}` : r.error;
+  $('#extref').value = ''; exts();
+};
+exts(); settings(); load(); flows(); allFiles();
+setInterval(load, 2000); setInterval(flows, 10000); setInterval(allFiles, 6000);
+</script>
+</body></html>

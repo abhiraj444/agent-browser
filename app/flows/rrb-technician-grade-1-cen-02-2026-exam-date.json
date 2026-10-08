@@ -1,0 +1,22 @@
+{
+ "name": "RRB Technician Grade 1 CEN 02/2026 exam date",
+ "query": "RRB Technician Grade 1 CEN 02/2026 exam date",
+ "created": "2026-10-06T21:16:04",
+ "steps": [
+  {
+   "i": 0,
+   "t": 1791321366.35,
+   "kind": "search",
+   "query": "RRB Technician Grade 1 CEN 02/2026 exam date",
+   "provider": "browser_google"
+  },
+  {
+   "i": 1,
+   "t": 1791321371.36,
+   "kind": "ai_check",
+   "question": "Is this goal achieved on this page: RRB Technician Grade 1 CEN 02/2026 exam date?",
+   "expect": "yes",
+   "url": "https://www.google.com/search?q=RRB+Technician+Grade+1+CEN+02%2F2026+exam+date&hl=en&gl=in"
+  }
+ ]
+}

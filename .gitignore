@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+deploy/oci_key
+deploy/oci_key.pub
+files/
+.hark/
+agentmap/out/
+agentmap/out_m1/
+*.zip

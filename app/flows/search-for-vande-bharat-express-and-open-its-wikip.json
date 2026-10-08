@@ -1,0 +1,11 @@
+{
+ "name": "Search for Vande Bharat Express and open its Wikipedia artic",
+ "query": "Vande Bharat Express wikipedia",
+ "created": "2026-10-06T20:25:45",
+ "steps": [
+  {"i": 0, "t": 1791318348.05, "kind": "search", "query": "Vande Bharat Express wikipedia", "provider": "browser_google"},
+  {"i": 1, "t": 1791318350.55, "kind": "click", "target": {"id": "lnk:wikipedia", "role": "link", "name": "Wikipedia", "region": "r:top"},
+   "url": "https://www.google.com/search?q=Vande+Bharat+Express+wikipedia&hl=en&gl=in"},
+  {"i": 2, "t": 1791318356.11, "kind": "ai_check", "question": "Is this goal achieved on this page: Search for Vande Bharat Express and open its Wikipedia article?", "expect": "yes", "url": "https://en.wikipedia.org/wiki/Vande_Bharat_Express"}
+ ]
+}

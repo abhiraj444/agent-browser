@@ -1,0 +1,13 @@
+services:
+  runner:
+    build: {context: .., dockerfile: app/Dockerfile}
+    environment:
+      - OPENROUTER_API_KEY
+      - BRAVE_API_KEY
+      - SERPER_API_KEY
+      - NTFY_TOPIC
+    ports: ["8080:8080"]
+    shm_size: "1gb"
+    volumes: ["agentapp:/home/agent/.agentapp"]
+    restart: unless-stopped
+volumes: {agentapp: {}}

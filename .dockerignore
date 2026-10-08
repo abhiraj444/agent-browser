@@ -1,0 +1,9 @@
+.git
+.hark
+files
+agentmap/out
+agentmap/out_m1
+deploy/oci_key*
+deploy/gh_*
+**/__pycache__
+*.zip

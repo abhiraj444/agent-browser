@@ -1,0 +1,127 @@
+{
+ "name": "Find me ssc je exam date",
+ "query": "Find me ssc je exam date",
+ "created": "2026-10-06T20:38:17",
+ "steps": [
+  {
+   "i": 0,
+   "t": 1791319099.34,
+   "kind": "search",
+   "query": "Find me ssc je exam date",
+   "provider": "browser_google"
+  },
+  {
+   "i": 1,
+   "t": 1791319103.63,
+   "kind": "click",
+   "target": {
+    "id": "lnk:staff-selection-commissi",
+    "role": "link",
+    "name": "Staff Selection Commission Official Website",
+    "region": "r:top"
+   },
+   "url": "https://www.google.com/search?q=Find+me+ssc+je+exam+date&hl=en&gl=in"
+  },
+  {
+   "i": 2,
+   "t": 1791319113.11,
+   "kind": "goto",
+   "url": "https://ssc.gov.in/exams/ssc-je"
+  },
+  {
+   "i": 3,
+   "t": 1791319119.1,
+   "kind": "type",
+   "target": {
+    "id": "in:search",
+    "role": "searchbox",
+    "name": "Search",
+    "region": "r:nav-2"
+   },
+   "text": "SSC JE exam date",
+   "submit": true,
+   "url": "https://ssc.gov.in/exams/ssc-je"
+  },
+  {
+   "i": 4,
+   "t": 1791319140.14,
+   "kind": "click",
+   "target": {
+    "id": "btn:for-candidates",
+    "role": "button",
+    "name": "For Candidates",
+    "region": "r:list-3"
+   },
+   "url": "https://ssc.gov.in/search?query=SSC%20JE%20exam%20date"
+  },
+  {
+   "i": 5,
+   "t": 1791319147.34,
+   "kind": "click",
+   "target": {
+    "id": "lnk:browse-by-examinations-i",
+    "role": "link",
+    "name": "Browse by Examinations img",
+    "region": "r:list-3"
+   },
+   "url": "https://ssc.gov.in/search?query=SSC%20JE%20exam%20date"
+  },
+  {
+   "i": 6,
+   "t": 1791319157.54,
+   "kind": "goto",
+   "url": "https://ssc.gov.in/exams/ssc-je"
+  },
+  {
+   "i": 7,
+   "t": 1791319164.18,
+   "kind": "type",
+   "target": {
+    "id": "in:search",
+    "role": "searchbox",
+    "name": "Search",
+    "region": "r:nav-2"
+   },
+   "text": "SSC JE exam date",
+   "submit": true,
+   "url": "https://ssc.gov.in/exams/ssc-je"
+  },
+  {
+   "i": 8,
+   "t": 1791319185.92,
+   "kind": "click",
+   "target": {
+    "id": "lnk:archives",
+    "role": "link",
+    "name": "Archives",
+    "region": "r:list-4"
+   },
+   "url": "https://ssc.gov.in/search?query=SSC%20JE%20exam%20date"
+  },
+  {
+   "i": 9,
+   "t": 1791319236.77,
+   "kind": "human_takeover",
+   "reason": "user_pause",
+   "url": "https://ssc.gov.in/home/archives",
+   "left_at": "https://ssc.gov.in/home/archives",
+   "waited_s": 29.0,
+   "note": "Check sarkari result like website for these kind of information.",
+   "step": 9
+  },
+  {
+   "i": 10,
+   "t": 1791319245.63,
+   "kind": "type",
+   "target": {
+    "id": "in:search",
+    "role": "searchbox",
+    "name": "Search",
+    "region": "r:nav-2"
+   },
+   "text": "Junior Engineer Examination",
+   "submit": true,
+   "url": "https://ssc.gov.in/home/archives"
+  }
+ ]
+}

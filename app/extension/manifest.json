@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Agent Browser",
+  "version": "0.1.0",
+  "description": "Real-browser mode, teach mode and handoff for the Agent Browser runner.",
+  "permissions": ["debugger", "tabs", "storage", "notifications", "alarms"],
+  "host_permissions": ["<all_urls>"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_popup": "popup.html", "default_title": "Agent Browser"},
+  "content_scripts": [{"matches": ["<all_urls>"], "js": ["teach.js"], "run_at": "document_idle", "all_frames": false}]
+}
