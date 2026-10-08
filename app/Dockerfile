@@ -7,6 +7,9 @@ RUN useradd -m agent
 WORKDIR /opt/agentapp
 COPY app/requirements.txt app/requirements.txt
 RUN python3 -m venv /opt/venv && /opt/venv/bin/pip install -r app/requirements.txt
+# engine v2 local ranker (ONNX, CPU). Optional: if it fails to install, v2 falls back to word matching and v1 is unaffected
+COPY app/requirements-v2.txt app/requirements-v2.txt
+RUN /opt/venv/bin/pip install -r app/requirements-v2.txt || echo 'v2 ranker deps failed; v2 will use word matching'
 COPY agentmap/ agentmap/
 COPY deploy/ deploy/
 COPY PLAN.md .gitignore .dockerignore ./
@@ -21,6 +24,7 @@ RUN mkdir -p /opt/agentapp/extensions/ubol && curl -sL -A 'Mozilla/5.0' -o /tmp/
 USER agent
 # persistent profile + token live in a volume so cookies/clearances survive restarts (same IP = same host)
 VOLUME /home/agent/.agentapp
-ENV PATH=/opt/venv/bin:$PATH NO_PROXY=127.0.0.1,localhost PORT=8080
+ENV PATH=/opt/venv/bin:$PATH NO_PROXY=127.0.0.1,localhost PORT=8080 \
+    FASTEMBED_CACHE_PATH=/home/agent/.agentapp/models HF_HUB_DISABLE_TELEMETRY=1
 EXPOSE 8080
 CMD ["python3", "app/main.py", "--tunnel"]

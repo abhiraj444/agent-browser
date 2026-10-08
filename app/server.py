@@ -68,7 +68,8 @@ def make_app(runner, ext=None):
             ms = max(2, min(40, int(d.get('max_steps') or 12)))
         except (TypeError, ValueError):
             ms = 12
-        t = runner.submit(Task(query, d.get('goal') or None, force_block=bool(d.get('force_block')), max_steps=ms))
+        t = runner.submit(Task(query, d.get('goal') or None, force_block=bool(d.get('force_block')), max_steps=ms,
+                                   engine='v2' if d.get('engine') == 'v2' else 'v1'))
         return web.json_response(t.public())
 
     async def one(q):

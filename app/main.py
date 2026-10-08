@@ -122,6 +122,11 @@ async def main():
     app, token = make_app(runner, ext)
     save_pids([p.pid for p in procs] + [browser.proc.pid])
     asyncio.create_task(runner.worker())
+    try:  # engine v2: load the local ranker models in the background so the first v2 task starts warm
+        import decide
+        decide.R.warm()
+    except Exception as e:
+        print(f'v2 ranker warm-up skipped: {e}', flush=True)
     rn = web.AppRunner(app)
     await rn.setup()
     await web.TCPSite(rn, '0.0.0.0', a.port).start()

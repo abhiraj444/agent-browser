@@ -62,8 +62,9 @@ password itself. On a receipt or confirmation page the user may want to keep, us
 
 
 class Task:
-    def __init__(self, query, goal=None, mode='agent', flow_path=None, force_block=False, max_steps=12):
+    def __init__(self, query, goal=None, mode='agent', flow_path=None, force_block=False, max_steps=12, engine='v1'):
         self.id = uuid.uuid4().hex[:8]
+        self.engine = engine if engine in ('v1', 'v2') else 'v1'   # v2 = local ranker + fast path (decide.py)
         self.facts = F.Facts()
         self._raw = (goal or query) if mode != 'replay' else ''   # read once by intake, then dropped
         self.query = F.mask_text(query)
@@ -122,7 +123,7 @@ class Task:
                     title=self.title, flow=self.flow_file, created=self.created, paused=self.status == 'paused',
                     nevents=len(self.events), guidance=self.guidance, notes=self.notes, search=self.search_text,
                     input_req=self.input_req, facts=self.facts.public(), files=self.public_files(),
-                    max_steps=self.max_steps)
+                    max_steps=self.max_steps, engine=self.engine, engine_stats=getattr(self, 'engine_stats', None))
 
     def public_files(self):
         out = []
@@ -192,7 +193,14 @@ class Runner:
             except Exception as e:
                 t.log(f'download setup failed: {e}')
             try:
-                t.aio = asyncio.create_task(self.replay(t) if t.mode == 'replay' else self.run(t))
+                if t.mode == 'replay':
+                    coro = self.replay(t)
+                elif t.engine == 'v2':
+                    import decide
+                    coro = decide.run_v2(self, t)
+                else:
+                    coro = self.run(t)
+                t.aio = asyncio.create_task(coro)
                 await t.aio
             except asyncio.CancelledError:
                 t.status, t.answer = 'stopped', t.answer or f'Stopped by you at {t.title or t.url}'

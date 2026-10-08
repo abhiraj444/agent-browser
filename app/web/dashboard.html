@@ -70,6 +70,7 @@ details[open]>summary::before{transform:rotate(45deg)}
     <p class="hint">Numbers and details you type here stay inside this task. Only a safe search like "download aadhaar card" goes to Google.</p>
     <div class="bar">
       <label class="field steps"><span>Steps</span><input id="ms" type="number" inputmode="numeric" value="12" min="2" max="40"></label>
+      <label class="field steps"><span>Engine</span><select id="eng"><option value="v1">v1 (stable)</option><option value="v2">v2 (fast, beta)</option></select></label>
       <button class="primary go" id="go">Start task</button>
     </div>
     <details><summary>More options</summary>
@@ -148,7 +149,8 @@ $('#go').onclick = async () => {
   const query = $('#q').value.trim();
   if (!query) { $('#gomsg').textContent = 'Describe a task first.'; $('#q').focus(); return; }
   $('#go').disabled = true;
-  const r = await post('/api/tasks', {query, force_block: $('#fb').checked, max_steps: +$('#ms').value});
+  localStorage.setItem('engine', $('#eng').value);
+  const r = await post('/api/tasks', {query, force_block: $('#fb').checked, max_steps: +$('#ms').value, engine: $('#eng').value});
   $('#go').disabled = false;
   if (r.ok) { $('#q').value = ''; $('#gomsg').textContent = 'Started. It shows up under Tasks.'; lastJSON = ''; load(); }
   else $('#gomsg').textContent = 'The task did not start. Check the text and try again.';
@@ -165,7 +167,7 @@ function taskHTML(t) {
   const steps = (t.steps || []).map(s => `<li><b>${esc(s.action)}</b> ${esc(s.detail)}</li>`).join('');
   const facts = (t.facts || []).filter(f => f.masked || f.skipped);
   return `<li class="task edge-${st}" data-id="${t.id}">
-    <span class="state s-${st}">${esc(STATE[st] || st)}</span>${t.mode === 'replay' ? ' <span class="small muted">replay</span>' : ''}
+    <span class="state s-${st}">${esc(STATE[st] || st)}</span>${t.mode === 'replay' ? ' <span class="small muted">replay</span>' : ''}${t.engine === 'v2' ? ' <span class="small muted">v2</span>' : ''}
     <h3>${esc(t.goal)}</h3>
     ${where(t) ? `<p class="where">${esc(where(t))}</p>` : ''}
     ${t.input_req ? askHTML(t) : ''}
@@ -280,5 +282,6 @@ $('#extadd').onclick = async () => {
 };
 exts(); settings(); load(); flows(); allFiles();
 setInterval(load, 2000); setInterval(flows, 10000); setInterval(allFiles, 6000);
+try { const e = localStorage.getItem('engine'); if (e) $('#eng').value = e; } catch (_) {}
 </script>
 </body></html>
