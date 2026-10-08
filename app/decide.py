@@ -229,6 +229,100 @@ def ground(R_, plan, cards, final_re):
     return act, act['thought']
 
 
+CLOSE_RE = re.compile(r'^\s*(×|✕|✖|x|close|close ad|close dialog|close popup|close this|dismiss|no,? thanks|no thank you|not now|'
+                      r'maybe later|later|skip|skip ad|skip this|cancel|reject all|reject|decline|necessary only|only necessary|'
+                      r'continue without accepting|got it|ok,? got it|i understand|accept( all)?( cookies)?|allow all|agree|i agree)\s*$', re.I)
+CLOSE_PREF = ['close ad', 'skip ad', 'close', '×', '✕', '✖', 'x', 'dismiss', 'no thanks', 'no thank you', 'not now', 'maybe later', 'later',
+              'skip', 'reject all', 'necessary only', 'only necessary', 'continue without accepting', 'decline', 'reject', 'got it',
+              'ok got it', 'i understand', 'cancel', 'accept', 'accept all', 'accept cookies', 'accept all cookies', 'allow all', 'agree', 'i agree']
+STRONG_CLOSE = re.compile(r'^\s*(×|✕|✖|x|close|close ad|close dialog|close popup|close this|dismiss|no,? thanks|no thank you|not now|maybe later|skip ad)\s*$', re.I)
+OVERLAY_RE = re.compile(r'cookie|consent|gdpr|privacy|advert|\bads?\b|sponsor|popup|pop-up|modal|newsletter|subscribe|notification|'
+                        r'offer|promo|install (our|the) app|download (our|the) app|sign up for|survey|feedback', re.I)
+CAPTCHA_RE = re.compile(r'captcha|security code|verification code shown|enter the (characters|text|code) (shown|in the image)', re.I)
+OTP_RE = re.compile(r'\botp\b|one[- ]time|verification code|enter (the )?code|sms code|6[- ]digit', re.I)
+USER_RE = re.compile(r'user ?(name|id)|login id|e-?mail|mobile|phone|account', re.I)
+
+
+def _dialog_ids(m):
+    """ids of controls that sit inside a visible dialog / alertdialog, per dialog"""
+    out = []
+    for n in m.by_id.values():
+        if isinstance(n, dict) and n.get('role') in ('dialog', 'alertdialog'):
+            ids = set()
+            AM.walk(n.get('kids', []), lambda k, p: ids.add(k['id']) if 'id' in k else None)
+            out.append((n, ids))
+    return out
+
+
+def situation(m, fields, cards):
+    """Read the page locally (no LLM) as one of: popup, captcha, otp, login, form, page. Returns a dict with
+    kind, why, and for a popup the card to click."""
+    editable = [f for f in fields or [] if not f.get('disabled') and f.get('type') not in ('checkbox', 'radio', 'select')]
+    lab = lambda f: f"{f.get('label') or ''} {f.get('name') or ''} {f.get('id') or ''} {f.get('autocomplete') or ''}"
+    by = {c['id']: c for c in cards}
+    dialogs = _dialog_ids(m)
+    in_dialog = set().union(*[ids for _, ids in dialogs]) if dialogs else set()
+    dialog_fields = [f for f in editable if f.get('id') in in_dialog]
+    # 1. a popup / ad / cookie banner over the page: a close-type control on screen, inside a dialog or an overlay-ish region,
+    #    and the dialog asks for nothing (a login or OTP dialog is a real step, not a popup)
+    if not dialog_fields:
+        cands = []
+        for c in cards:
+            nm = ' '.join((c['name'] or '').split())
+            if not c['onscreen'] or not CLOSE_RE.match(nm):
+                continue
+            reg = m.by_id.get(c['node'].get('region') or '', {})
+            regname = (reg.get('name') or '') if isinstance(reg, dict) else ''
+            inside = c['id'] in in_dialog
+            dname = next((d.get('name') or '' for d, ids in dialogs if c['id'] in ids), '')
+            overlayish = bool(OVERLAY_RE.search(f'{regname} {dname}')) or _norm(nm) in ('close ad', 'skip ad')
+            alert = any(d.get('role') == 'alertdialog' and c['id'] in ids for d, ids in dialogs)
+            if not (inside or overlayish) or (alert and not overlayish):
+                continue  # an alertdialog is usually a confirm step ("Are you sure?"), not an ad
+            if not overlayish and not STRONG_CLOSE.match(nm):
+                continue  # in a plain dialog only a real close (×, Close, No thanks...) is safe; never Cancel/OK/Accept
+            key = _norm(nm.replace('×', ' ×').replace('✕', ' ✕')) or nm.lower()
+            rank = next((i for i, p in enumerate(CLOSE_PREF) if key == p or nm.lower() == p), len(CLOSE_PREF))
+            cands.append((rank, c, dname or regname))
+        if cands:
+            cands.sort(key=lambda x: x[0])
+            _, c, where = cands[0]
+            return dict(kind='popup', card=c, why=f'popup "{(where or "overlay")[:40]}" with "{c["name"][:20]}"')
+    # 2. captcha (a text-image captcha field; bot checks like reCAPTCHA are handed to the human earlier, in observe)
+    cap = [f for f in editable if CAPTCHA_RE.search(lab(f))]
+    if cap:
+        return dict(kind='captcha', fields=[f['id'] for f in cap], why='captcha field on the page')
+    # 3. one-time code
+    otp = [f for f in editable if OTP_RE.search(lab(f)) or f.get('autocomplete') == 'one-time-code']
+    if otp and len(editable) <= 3:
+        return dict(kind='otp', fields=[f['id'] for f in otp], why='one-time code field')
+    # 4. login: a password field with a user field near it
+    pw = [f for f in editable if f.get('type') == 'password']
+    if pw and len(editable) <= 4:
+        users = [f for f in editable if f.get('type') != 'password' and (USER_RE.search(lab(f)) or f.get('type') in ('email', 'tel', 'text'))]
+        return dict(kind='login', fields=[f['id'] for f in users[:1] + pw[:1]], why='sign-in form')
+    # 4b. a sign-in dialog that asks for a mobile / email first (OTP-style logins)
+    if dialog_fields and any(re.search(r'log ?in|sign ?in|sign ?up|account', d.get('name') or '', re.I) for d, _ in dialogs):
+        return dict(kind='login', fields=[f['id'] for f in dialog_fields], why='sign-in dialog')
+    # 5. a form to fill: two or more empty editable fields on screen
+    empty = [f for f in fields or [] if not f.get('disabled') and f.get('visible', True) is not False and
+             f.get('type') not in ('checkbox', 'radio') and not str(f.get('value') or '').strip()]
+    if len(empty) >= 2:
+        return dict(kind='form', fields=[f['id'] for f in empty], why=f'form with {len(empty)} empty fields')
+    return dict(kind='page', why='')
+
+
+SIT_HINT = {
+    'captcha': 'SITUATION: a text captcha is on this page. Fill the other fields with fill_form, and for the captcha use ask_user '
+               'with type "captcha" (the executor reads the image itself and asks the person only if it cannot). Never guess it.',
+    'otp': 'SITUATION: the page wants a one-time code. Use ask_user with type "otp" for it (never guess), then press Verify/Submit.',
+    'login': 'SITUATION: sign-in form. Fill it in one go with fill_form using fact keys (e.g. "username"/"mobile"/"email" and '
+             '"password"); a missing key makes the executor ask the user. Never type a masked value. Then press the sign-in button.',
+    'form': 'SITUATION: a form to fill. Use ONE fill_form with every visible field (fact keys for personal values, "value" for '
+            'plain choices), then read the result and fix errors before pressing Next/Submit.',
+}
+
+
 def outline(m, budget=1100):
     try:
         return m.render_focused(budget, getattr(m, 'viewport', None))
@@ -261,7 +355,8 @@ async def run_v2(self, t):
     """Runner.run with the v2 decision layer. `self` is the Runner."""
     import agent as A
     await self.intake(t)
-    t.engine_stats = dict(local=0, llm=0, full_map=0, chars=0)
+    t.engine_stats = dict(local=0, llm=0, full_map=0, chars=0, popups=0)
+    t.popup_tries, t.last_sit = {}, None
     if R.state == 'cold':
         await asyncio.to_thread(R.load)
     t.emit('log', f'engine v2: local ranker {R.state}' + (f' ({R.err[:80]})' if R.state == 'lexical' and R.err else ''))
@@ -297,8 +392,25 @@ async def run_v2(self, t):
         if not t.visited or t.visited[-1][1] != t.url:
             t.visited.append((t.title[:60], t.url[:120]))
         act, used, src = None, 'local-ranker', 'llm'
+        sit = situation(m, fields, cards)
+        if sit['kind'] != getattr(t, 'last_sit', None):
+            t.last_sit = sit['kind']
+            if sit['kind'] != 'page':
+                t.emit('log', f"situation: {sit['kind']} ({sit['why']})")
+        # popups / ads / cookie banners close locally, at most twice per page, before anything else
+        if sit['kind'] == 'popup' and t.popup_tries.get(t.url, 0) < 2 and not need_vision:
+            t.popup_tries[t.url] = t.popup_tries.get(t.url, 0) + 1
+            c = sit['card']
+            act = dict(action='click', id=c['id'], thought=f'close the popup: {sit["why"]}')
+            src = 'local'
+            t.engine_stats['local'] += 1
+            t.engine_stats['popups'] = t.engine_stats.get('popups', 0) + 1
+            t.emit('think', f'[local] {act["thought"]}', model='local-ranker', action=act)
+        elif sit['kind'] in ('captcha', 'otp', 'login', 'form') and queue:
+            t.emit('log', f"fast path paused: {sit['kind']} pages go to the form handlers")
+            queue = []
         # ---------- fast path: ground the next planned action with the local ranker, no LLM call ----------
-        if queue and not need_vision and n < t.max_steps:
+        if act is None and queue and not need_vision and n < t.max_steps:
             plan = queue.pop(0)
             t0 = time.time()
             act, why = await asyncio.to_thread(ground, R, plan, cards, A.FINAL_BTN)
@@ -312,7 +424,14 @@ async def run_v2(self, t):
                 t.emit('log', f'fast path handed back to the LLM: {why}')
         if act is None:
             rev = t.guide_rev
-            ranked = await asyncio.to_thread(R.rank, subgoal or t.goal, cards, None, 18)
+            rq = subgoal or t.goal
+            if sit['kind'] in ('captcha', 'otp', 'login', 'form'):
+                rq = f"{rq} | fill {sit['kind']} fields and press the submit / sign in / verify / next button"
+            ranked = await asyncio.to_thread(R.rank, rq, cards, None, 18)
+            if sit['kind'] in ('captcha', 'otp', 'login', 'form'):  # the situation's own fields always make the list
+                have = {c['id'] for _, c in ranked}
+                ranked += [(0.0, c) for c in cards if c['id'] in set(sit.get('fields') or []) and c['id'] not in have]
+            hint = ('\n' + SIT_HINT[sit['kind']]) if sit['kind'] in SIT_HINT else ''
             redact = t.facts.redact
             full = False
             for attempt in range(2):
@@ -334,7 +453,7 @@ async def run_v2(self, t):
                 seen = '\nPAGES VISITED: ' + ' > '.join(f'{ti or u}' for ti, u in t.visited[-10:])
                 older = history[:-8]
                 hist = ((f'(earlier: {len(older)} steps: ' + '; '.join(h.split(' -> ')[0][:50] for h in older[-12:]) + ')\n') if older else '') + '\n'.join(history[-8:])
-                msg = (f"GOAL: {t.goal}{guide}\nSTEP {n}/{t.max_steps}{last}{facts_block}{notes}{t.files_note()}{seen}\nHISTORY:\n" +
+                msg = (f"GOAL: {t.goal}{guide}{hint}\nSTEP {n}/{t.max_steps}{last}{facts_block}{notes}{t.files_note()}{seen}\nHISTORY:\n" +
                        redact(hist) + (f'\n\n{extra}' if extra else '') + f"\n\n{page_block}" +
                        (f"\n\nFORM FIELDS (visible inputs with their current values; ids work with fill_form, click and type):\n{form_block}"
                         if form_block else ''))
@@ -462,4 +581,4 @@ def _summary(t):
     if s:
         tot = s['local'] + s['llm']
         t.emit('log', f"engine v2: {s['local']} of {tot} decisions made locally, {s['llm']} LLM calls "
-                      f"({s['full_map']} asked for the full map), {s['chars'] // 1000}k chars sent")
+                      f"({s['full_map']} asked for the full map), {s.get('popups', 0)} popups closed locally, {s['chars'] // 1000}k chars sent")
